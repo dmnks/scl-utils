@@ -1,10 +1,10 @@
 ENABLE_TESTING()
 INCLUDE_DIRECTORIES(. ../src ${PROJECT_BINARY_DIR}/src )
-SET( CMAKE_C_FLAGS "-Wall -pedantic --std=gnu99 -D_GNU_SOURCE -g -Wl,--wrap=get_command_output -Wl,--wrap=system" )
+SET( CMAKE_C_FLAGS "-Wall -pedantic --std=gnu99 -D_GNU_SOURCE -g -Wl,--wrap=get_command_output -Wl,--wrap=system,--wrap=putenv,--wrap=getenv" )
 
 
 SET(tested_sources ../src/scllib.c ../src/sclmalloc.c ../src/lib_common.c ../src/debug.c ../src/fallback.c)
-SET(testing_sources test_scllib.c test_common.c)
+SET(testing_sources test_scllib.c test_common.c dict.c)
 ADD_EXECUTABLE(test_scllib ${testing_sources} ${tested_sources})
 TARGET_LINK_LIBRARIES(test_scllib libcmocka.so)
 TARGET_LINK_LIBRARIES(test_scllib librpm.so librpmio.so)

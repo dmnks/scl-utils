@@ -4,14 +4,48 @@
 #include <cmocka.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "test_common.h"
+#include "dict.h"
 #include "../src/scllib.h"
 #include "../src/errors.h"
+
+extern int __real_putenv();
+extern char *__real_getenv();
+dict_t *mockenv;
+
+int __wrap_putenv(char *string)
+{
+    if (mockenv)
+        return dict_put(&mockenv, string);
+    return __real_putenv(string);
+}
+
+char *__wrap_getenv(const char *name)
+{
+    char *value;
+    if (mockenv && (value = dict_get(mockenv, name)))
+        return value;
+    return __real_getenv(name);
+}
 
 char *__wrap_get_command_output(const char *path, char *const argv[], int fileno)
 {
     return mock_ptr_type(char *);
+}
+
+int  __wrap_system(const char *command)
+{
+    char *env_path;
+
+    env_path = getenv("PATH");
+    assert_true(strstr(env_path, mock_ptr_type(char *)) != NULL);
+
+
+    return 0;
 }
 
 typedef struct {
@@ -148,17 +182,6 @@ static void test_get_installed_collections(void **state)
     }
 }
 
-int  __wrap_system(const char *command)
-{
-    char *env_path;
-
-    env_path = getenv("PATH");
-    assert_true(strstr(env_path, mock_ptr_type(char *)) != NULL);
-
-
-    return 0;
-}
-
 typedef struct {
     char *col_list;
     char *env_vars;
@@ -215,6 +238,7 @@ static void test_run_command(void **state)
     int tc_count = sizeof(testcases) / sizeof(testcases[0]);
 
     for (int i = 0; i < tc_count; i++) {
+        mockenv = dict_init();
         release_scllib_cache();
 
         if (testcases[i].col_list)
@@ -229,6 +253,7 @@ static void test_run_command(void **state)
 
         ret = run_command(testcases[i].collections, "test_cmd", false);
         assert_int_equal(ret, testcases[i].ret);
+        dict_free(mockenv);
     }
 
 }
